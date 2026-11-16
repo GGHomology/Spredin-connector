@@ -1,0 +1,23 @@
+{
+  "name": "spredin-connector",
+  "version": "0.1.0",
+  "description": "Claude Desktop extension that lets Claude work in Spredin Pro on the same computer, with the user's approval for every change.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "author": "GGHomology",
+  "homepage": "https://spredin.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GGHomology/Spredin-connector.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "pack": "python3 tools/pack.py",
+    "gen-tools": "cd \"${SPREDIN_SRC:-../spredin-pro}\" && node_modules/.bin/vite-node \"$(dirname \"$npm_package_json\")/tools/gen-tools.mts\"",
+    "gen-tools:check": "cd \"${SPREDIN_SRC:-../spredin-pro}\" && node_modules/.bin/vite-node \"$(dirname \"$npm_package_json\")/tools/gen-tools.mts\" --check"
+  }
+}

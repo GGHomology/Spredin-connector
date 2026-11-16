@@ -1,0 +1,106 @@
+{
+  "manifest_version": "0.3",
+  "name": "spredin-connector",
+  "display_name": "Spredin Pro",
+  "version": "0.1.0",
+  "description": "Lets Claude read the workbooks open in Spredin Pro on this computer and change them. Changes ask you in Spredin Pro first, unless you turned on applying them without asking.",
+  "long_description": "Spredin Pro is a spreadsheet app for the Mac. This extension connects Claude Desktop to it, on this computer only.\n\nOnce you allow Claude in Spredin Pro, it can read every open workbook without asking: cells and tables, sheet layouts, your selection. It can also write cells, run Python on a workbook, and edit its slides and notes. Each change shows a card in Spredin Pro for you to allow first, unless you turned on Apply assistant changes without asking; a script that reaches beyond the workbook still asks unless you also allowed that, and a change to the notes always asks. Each change is one undo step.\n\nTo use it, turn on Settings → Connect AI Apps in Spredin Pro. The first time Claude asks, Spredin Pro shows an Allow sheet with a code; allow only if Claude shows the same code. The extension talks only to Spredin Pro on this computer, and signs every request so that no other program can pose as Spredin Pro.",
+  "author": {
+    "name": "GGHomology",
+    "url": "https://spredin.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GGHomology/Spredin-connector"
+  },
+  "homepage": "https://spredin.com",
+  "documentation": "https://github.com/GGHomology/Spredin-connector#readme",
+  "support": "https://spredin.com/support",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/index.js"
+      ],
+      "env": {}
+    }
+  },
+  "tools": [
+    {
+      "name": "describe_sheet",
+      "description": "See a sheet's layout: its tables, headings and kinds of column."
+    },
+    {
+      "name": "read_range",
+      "description": "Read the cells in a range."
+    },
+    {
+      "name": "aggregate",
+      "description": "Count, sum and average a table's columns, by group if you like."
+    },
+    {
+      "name": "find",
+      "description": "Find the cells that show some text."
+    },
+    {
+      "name": "get_selection",
+      "description": "See what you have selected in Spredin Pro."
+    },
+    {
+      "name": "write_cells",
+      "description": "Write values or formulas into cells. Asks you in Spredin Pro first, unless you let changes apply without asking."
+    },
+    {
+      "name": "run_python",
+      "description": "Run Python on the workbook. A script that writes asks you first, unless you let changes apply without asking."
+    },
+    {
+      "name": "memory",
+      "description": "Read or change the workbook's notes for the assistant. A change always asks you first."
+    },
+    {
+      "name": "slides",
+      "description": "Read, change, show or export the workbook's slide decks. A change asks you first, unless you let it apply without asking."
+    },
+    {
+      "name": "python_help",
+      "description": "The full reference for Spredin Pro's Python scripting."
+    },
+    {
+      "name": "list_workbooks",
+      "description": "List the open workbooks, and which one Claude works in."
+    },
+    {
+      "name": "use_workbook",
+      "description": "Choose which open workbook Claude works in."
+    },
+    {
+      "name": "connect_spredin",
+      "description": "Connect Claude to Spredin Pro again, when you ask it to. Spredin Pro asks you to allow it and shows a code."
+    }
+  ],
+  "tools_generated": true,
+  "keywords": [
+    "spreadsheet",
+    "excel",
+    "workbook",
+    "spredin",
+    "mac"
+  ],
+  "license": "MIT",
+  "privacy_policies": [
+    "https://spredin.com/privacy"
+  ],
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32"
+    ],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}
