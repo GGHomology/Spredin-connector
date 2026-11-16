@@ -65,6 +65,10 @@ const UNREPORTED_TTL_MS = 5 * 60_000;
 const SHUTDOWN_GRACE_MS = 2_000; // after stdin ends, open requests may finish this long
 const SMALL_BODY = 64 * 1024;
 const LARGE_BODY = 32 * 1024 * 1024;
+/** The most Spredin takes in one request (PROTOCOL.md): a larger one is not
+ *  sent. Spredin refuses it before reading it, and that refusal (413) cannot be
+ *  signed, since nothing of the request was checked. */
+export const MAX_REQUEST_BODY = 2 * 1024 * 1024;
 
 /** The pairing file and its folder are for this user only. */
 export const FILE_MODE = 0o600;
@@ -145,6 +149,8 @@ export const MESSAGES = {
     'Spredin Pro does not accept this connection: the user may have disconnected Claude in Spredin Pro, or another program is answering on Spredin Pro’s port. Nothing was read or changed. If the user wants to connect again, call connect_spredin.',
   unusable:
     'The extension’s pairing file cannot be read, so it did not connect. Nothing was read or changed. If the user wants to connect to Spredin Pro, call connect_spredin.',
+  tooLarge:
+    'This request is larger than Spredin Pro takes in one call (2 MB), so it was not sent and nothing changed. Split it into smaller writes, or use run_python to build the data in the workbook instead of sending it.',
   'other-user':
     'Something not running as this user is answering on Spredin Pro’s port, so the extension did not ask it to connect and sent it nothing. On a shared Mac, another user’s program may be using the port. Ask the user to quit and reopen Spredin Pro, then try again.',
   declined:
@@ -434,6 +440,7 @@ export function httpRequest({ port, method, path: urlPath, headers = {}, body, t
  */
 export async function signedMcp({ port, pairing, message, timeoutMs, signal }) {
   const body = Buffer.from(JSON.stringify(message), 'utf8');
+  if (body.length > MAX_REQUEST_BODY) return { kind: 'too-large', status: 0, json: null };
   const time = String(Date.now());
   const nonce = crypto.randomBytes(16).toString('hex');
   const mac = requestMac({ key: pairing.key, port, id: pairing.id, time, nonce, body });
@@ -454,6 +461,10 @@ export async function signedMcp({ port, pairing, message, timeoutMs, signal }) {
     maxBytes: LARGE_BODY,
   });
   const verified = macMatches(answerMac({ key: pairing.key, port, nonce, status: r.status, body: r.raw }), r.headers['x-spredin-mac']);
+  // Spredin's "too large" comes before anything is checked, so it is unsigned;
+  // read as an impostor's answer, it cut a real Spredin off for the session
+  // (found 2026-11-16). Nothing of the request was used, either way.
+  if (!verified && r.status === 413) return { kind: 'too-large', status: 413, json: null };
   if (!verified) return { kind: r.status === 401 ? 'refused' : 'unsigned', status: r.status, json: null };
   if (r.status === 200 || r.status === 202) return { kind: 'ok', status: r.status, json: parseJson(r.raw) };
   return { kind: 'signed', status: r.status, json: null };
@@ -1181,6 +1192,7 @@ export class Connector {
       } finally {
         signal.removeEventListener('abort', onCancel);
       }
+      if (r.kind === 'too-large') return { result: toolError(MESSAGES.tooLarge) };
       if (r.kind === 'refused' || r.kind === 'unsigned') {
         if (r.kind === 'unsigned') this.markImpostor(v.port);
         this.verified = null;

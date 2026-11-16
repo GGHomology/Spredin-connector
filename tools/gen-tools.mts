@@ -81,7 +81,7 @@ const SUMMARY: Record<string, string> = {
   find: 'Find the cells that show some text.',
   get_selection: 'See what you have selected in Spredin Pro.',
   write_cells: 'Write values or formulas into cells. Asks you in Spredin Pro first, unless you let changes apply without asking.',
-  run_python: 'Run Python on the workbook. A script that writes asks you first, unless you let changes apply without asking.',
+  run_python: 'Run Python on the workbook. A script that writes, reaches outside it or changes its notes asks first, unless you let it.',
   memory: "Read or change the workbook's notes for the assistant. A change always asks you first.",
   slides: "Read, change, show or export the workbook's slide decks. A change asks you first, unless you let it apply without asking.",
   python_help: "The full reference for Spredin Pro's Python scripting.",

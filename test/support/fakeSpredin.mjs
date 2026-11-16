@@ -95,6 +95,7 @@ export async function startFakeSpredin(opts = {}) {
     pair: opts.pair ?? 'allow', // allow | decline | … | hang | bad-token
     pairDelayMs: opts.pairDelayMs ?? 0,
     sign: opts.sign ?? 'good', // good | none | bad: how answers are signed
+    maxBody: opts.maxBody ?? Infinity, // a larger /mcp body: an unsigned 413, as Spredin's limit answers
     tools: opts.tools ?? FAKE_TOOLS,
     onCall:
       opts.onCall ??
@@ -148,6 +149,9 @@ export async function startFakeSpredin(opts = {}) {
       return json(res, status, { error, message });
     }
 
+    if (req.method === 'POST' && req.url === '/mcp' && raw.length > state.maxBody) {
+      return json(res, 413, { error: 'too-large', message: 'Request body too large' });
+    }
     if (req.method === 'POST' && req.url === '/mcp') {
       const id = req.headers['x-spredin-pairing'];
       const time = req.headers['x-spredin-time'];

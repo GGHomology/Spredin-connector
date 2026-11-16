@@ -8,7 +8,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { startFakeSpredin, startImpostor, closeAllFakes, portRange, randomBase, FAKE_TOOLS, keyOf, reqMac } from './support/fakeSpredin.mjs';
 import { startConnector, finish, killAll, sleep, textOf, writePairing, fakeLsof, REPO } from './support/harness.mjs';
-import { MESSAGES, formatCode, annotated, TOOL_ANNOTATIONS } from '../server/connector.js';
+import { MESSAGES, formatCode, annotated, TOOL_ANNOTATIONS, MAX_REQUEST_BODY } from '../server/connector.js';
 
 afterEach(async () => {
   await killAll();
@@ -248,6 +248,32 @@ test('the live tool list carries the annotations too', async () => {
     else assert.deepEqual(t.annotations, TOOL_ANNOTATIONS[t.name], t.name);
   }
   assert.ok(list.some((t) => t.name === 'fake_only'));
+  await finish(assert, c, [fake]);
+});
+
+test('a request over 2 MB is not sent: Claude is told to split it, and Spredin sees nothing of it', async () => {
+  const fake = await startFakeSpredin();
+  const c = startConnector({ ports: fake.range });
+  seed(fake, c);
+  await c.initialize();
+  const big = 'x'.repeat(MAX_REQUEST_BODY + 10);
+  const r = await c.call('write_cells', { start: 'Sales!A1', values: [[big]] });
+  assert.equal(textOf(r), MESSAGES.tooLarge);
+  assert.equal(fake.calls().length, 0, 'not sent');
+  const ok = await c.call('get_selection');
+  assert.equal(ok.result.isError, false, 'and the next call goes ahead');
+  await finish(assert, c, [fake]);
+});
+
+test('Spredin\u2019s unsigned 413 is read as too large, not as an impostor: the port is still used', async () => {
+  const fake = await startFakeSpredin({ maxBody: 4_000 });
+  const c = startConnector({ ports: fake.range });
+  seed(fake, c);
+  await c.initialize();
+  const r = await c.call('write_cells', { start: 'Sales!A1', values: [['y'.repeat(6_000)]] });
+  assert.equal(textOf(r), MESSAGES.tooLarge);
+  const ok = await c.call('get_selection');
+  assert.equal(ok.result.isError, false, 'the same port answers the next call');
   await finish(assert, c, [fake]);
 });
 

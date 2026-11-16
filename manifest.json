@@ -55,7 +55,7 @@
     },
     {
       "name": "run_python",
-      "description": "Run Python on the workbook. A script that writes asks you first, unless you let changes apply without asking."
+      "description": "Run Python on the workbook. A script that writes, reaches outside it or changes its notes asks first, unless you let it."
     },
     {
       "name": "memory",
@@ -96,8 +96,7 @@
   ],
   "compatibility": {
     "platforms": [
-      "darwin",
-      "win32"
+      "darwin"
     ],
     "runtimes": {
       "node": ">=18.0.0"

@@ -59,9 +59,11 @@ test('manifest server: node, ${__dirname}/server/index.js, which exists', () => 
   for (const v of Object.values(server.mcp_config.env ?? {})) assert.equal(typeof v, 'string');
 });
 
-test('manifest compatibility: darwin and win32, node >= 18', () => {
+test('manifest compatibility: macOS only until Spredin for Windows exists, node >= 18', () => {
   subset(manifest.compatibility, ['claude_desktop', 'platforms', 'runtimes'], 'compatibility');
-  assert.deepEqual(manifest.compatibility.platforms, ['darwin', 'win32']);
+  // SECURITY.md: the listener check before pairing is macOS's; Windows waits
+  // for Spredin for Windows and its own check.
+  assert.deepEqual(manifest.compatibility.platforms, ['darwin']);
   subset(manifest.compatibility.runtimes, ['python', 'node'], 'runtimes');
   assert.equal(manifest.compatibility.runtimes.node, '>=18.0.0');
   assert.equal(pkg.engines.node, '>=18');

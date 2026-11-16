@@ -58,7 +58,9 @@ After that:
 
 ## What Claude cannot do
 
-- Open, save or close files.
+- Open, save or close workbooks. It writes a file only where you choose:
+  exporting slides opens Spredin Pro's save panel, and a script that writes a
+  PDF asks you first.
 - Read other files on your Mac, or other apps. A script that wants a file
   asks you first.
 - Reach Spredin Pro when it is closed, or when Connect AI Apps is off. Claude
@@ -181,6 +183,7 @@ These variables exist for the tests. The extension ignores them unless
 | `SPREDIN_CONNECTOR_PORTS` | Ports to look on, e.g. `45000-45007`. |
 | `SPREDIN_CONNECTOR_PAIRING_FILE` | Where the pairing file goes. |
 | `SPREDIN_CONNECTOR_PAIR_WAIT_MS` | How long a call waits for Spredin's first answer to a pairing request (1.5 s). |
+| `SPREDIN_CONNECTOR_PAIR_ANSWER_WAIT_MS` | How long a call made after the code was given waits for the person's answer (190 s). |
 | `SPREDIN_CONNECTOR_PROGRESS_MS` | How often progress is reported (15 s). |
 | `SPREDIN_CONNECTOR_LSOF` | A program to run in place of `/usr/sbin/lsof`. |
 

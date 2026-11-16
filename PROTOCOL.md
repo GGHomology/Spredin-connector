@@ -108,6 +108,13 @@ X-Spredin-Mac:       hex(HMAC-SHA256(K, "req\n" + port + "\n" + id + "\n" + time
 own clock, a nonce it has seen in the last 10 minutes, or a MAC that does not
 match.
 
+A request body is at most 2 MB (2,097,152 bytes). Spredin refuses a larger one
+with `413` before reading it, unsigned, since nothing of it was checked; the
+extension never sends one (it tells Claude the request is too large), and
+reads an unsigned `413` as "too large", not as another program answering.
+Spredin also closes a connection that has not sent its request headers within
+15 s, and keeps at most 32 connections open at once.
+
 Every answer to a request that passed carries
 
 ```text
@@ -171,7 +178,7 @@ scripts without asking. A memory change from an outside app always asks.
 ## What Spredin records
 
 With Edit History on, a change made through the connector is recorded as the
-app's: "Claude (connected)", which tool, approved or applied without asking.
+app's: "Claude · connected", which tool, approved or applied without asking.
 With History's "Record More Detail" on, its reads are noted too, and the
 whole script or cell list it approved is kept with the step.
 
