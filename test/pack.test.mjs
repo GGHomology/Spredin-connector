@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { REPO, tempDir, killAll } from './support/harness.mjs';
+import { annotated } from '../server/connector.js';
 
 afterEach(killAll);
 
@@ -138,6 +139,6 @@ test('the server inside the .mcpb runs on its own and offers the packaged tools'
   assert.equal(code, 0);
   const msgs = out2.trim().split('\n').map((l) => JSON.parse(l));
   assert.equal(msgs.find((m) => m.id === 1).result.serverInfo.version, manifest.version);
-  const packaged = JSON.parse(fs.readFileSync(path.join(REPO, 'server', 'tools.json'), 'utf8')).tools;
+  const packaged = JSON.parse(fs.readFileSync(path.join(REPO, 'server', 'tools.json'), 'utf8')).tools.map(annotated);
   assert.deepEqual(msgs.find((m) => m.id === 2).result.tools, packaged);
 });

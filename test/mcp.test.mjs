@@ -6,14 +6,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { startFakeSpredin, closeAllFakes } from './support/fakeSpredin.mjs';
 import { startConnector, finish, killAll, sleep, textOf, REPO } from './support/harness.mjs';
-import { MESSAGES } from '../server/connector.js';
+import { MESSAGES, annotated } from '../server/connector.js';
 
 afterEach(async () => {
   await killAll();
   await closeAllFakes();
 });
 
-const PACKAGED = JSON.parse(fs.readFileSync(path.join(REPO, 'server', 'tools.json'), 'utf8')).tools;
+// As served: each tool with its annotations (TOOL_ANNOTATIONS).
+const PACKAGED = JSON.parse(fs.readFileSync(path.join(REPO, 'server', 'tools.json'), 'utf8')).tools.map(annotated);
 const VERSION = JSON.parse(fs.readFileSync(path.join(REPO, 'manifest.json'), 'utf8')).version;
 const PV = 'io.modelcontextprotocol/protocolVersion';
 const CAPS = 'io.modelcontextprotocol/clientCapabilities';

@@ -27,7 +27,8 @@ to pair. It writes one file: its pairing file.
 - **A code to compare.** Each pairing request carries a fresh code of six
   characters, made by the system's random number generator from an alphabet
   with no look-alikes. Spredin Pro's sheet shows the code it received, and
-  Claude is told to show the code the extension sent. Allow only if they match.
+  Claude is told to show the code the extension sent, in its reply, before it
+  waits for your answer. Allow only if they match.
 - **Changes ask you, unless you said otherwise.** Writing cells, a script that
   writes, and changing slides show a card in Spredin Pro first, unless you
   turned on "Apply assistant changes without asking". A script that reaches

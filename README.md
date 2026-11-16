@@ -29,10 +29,10 @@ There is nothing to set up in Claude Desktop.
 2. Open a workbook in Spredin Pro.
 3. Ask Claude to do something with it, for example “What are the totals by
    region in my Sales sheet?”
-4. The first time, Spredin Pro asks **Allow Claude to use Spredin?** and shows
-   a code such as `K7Q-M2X`. Claude shows a code in the chat too. Click Allow
-   only if the two codes are the same. Don't Allow is the default.
-5. Then ask Claude to carry on.
+4. The first time, Claude shows a code such as `K7Q-M2X` in its reply, and
+   Spredin Pro asks **Allow Claude to use Spredin?** with a code too. Click
+   Allow only if the two codes are the same. Don't Allow is the default.
+   Claude waits for your answer and then carries on by itself.
 
 After that:
 

@@ -8,16 +8,17 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { startFakeSpredin, startImpostor, closeAllFakes, portRange, randomBase, FAKE_TOOLS, keyOf, reqMac } from './support/fakeSpredin.mjs';
 import { startConnector, finish, killAll, sleep, textOf, writePairing, fakeLsof, REPO } from './support/harness.mjs';
-import { MESSAGES, formatCode } from '../server/connector.js';
+import { MESSAGES, formatCode, annotated, TOOL_ANNOTATIONS } from '../server/connector.js';
 
 afterEach(async () => {
   await killAll();
   await closeAllFakes();
 });
 
-const PACKAGED = JSON.parse(fs.readFileSync(path.join(REPO, 'server', 'tools.json'), 'utf8')).tools;
+// As served: each tool with its annotations (TOOL_ANNOTATIONS).
+const PACKAGED = JSON.parse(fs.readFileSync(path.join(REPO, 'server', 'tools.json'), 'utf8')).tools.map(annotated);
 const CONNECT_TOOL = PACKAGED.find((t) => t.name === 'connect_spredin');
-const LIVE = [...FAKE_TOOLS, CONNECT_TOOL];
+const LIVE = [...FAKE_TOOLS, CONNECT_TOOL].map(annotated);
 const POSIX = process.platform !== 'win32';
 
 async function until(pred, timeoutMs = 5_000, what = 'a condition') {
@@ -171,8 +172,8 @@ test('a slow Allow: the call shows Spredin’s code and says to allow only if th
   assert.equal(r.result.isError, true);
   const [code] = fake.state.codes;
   assert.match(code, /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/);
-  assert.match(textOf(r), new RegExp(`Show the user this code: ${formatCode(code)}\\.`));
-  assert.match(textOf(r), /click Allow in Spredin Pro only if Spredin Pro shows the same code, then call this tool again/);
+  assert.match(textOf(r), new RegExp(`show the user this code: ${formatCode(code)}, and ask them to click Allow in Spredin Pro only if Spredin Pro shows the same code\\.`));
+  assert.match(textOf(r), /Then call this tool, with the same arguments, again: it waits for their answer/);
   assert.ok(waited < 1_400, `the call came back in ${waited} ms, before the person answered`);
   assert.equal(fs.existsSync(c.pairingFile), false);
 
@@ -182,6 +183,71 @@ test('a slow Allow: the call shows Spredin’s code and says to allow only if th
   const r2 = await c.call('read_range', { range: 'A1' });
   assert.equal(r2.result.isError, false);
   assert.equal(fake.state.pairCount, 1, 'the second call did not ask again');
+  await finish(assert, c, [fake]);
+});
+
+test('the call made once the code was given waits for the Allow, then does what was asked', async () => {
+  const fake = await startFakeSpredin({ pairDelayMs: 2_500 });
+  const c = startConnector({ ports: fake.range, env: { SPREDIN_CONNECTOR_PAIR_WAIT_MS: '300' } });
+  await c.initialize();
+  const t0 = Date.now();
+  const first = await c.call('read_range', { range: 'A1' });
+  assert.ok(Date.now() - t0 < 1_400, 'the code comes back before the person answers');
+  assert.match(textOf(first), /show the user this code/);
+  // Claude shows the code, then calls again at once: this call waits.
+  const again = await c.call('read_range', { range: 'A1' });
+  const waited = Date.now() - t0;
+  assert.equal(again.result.isError, false, textOf(again));
+  assert.ok(waited >= 2_300, `it waited for the Allow (${waited} ms)`);
+  assert.equal(fake.state.pairCount, 1, 'one question to the person');
+  assert.equal(fake.calls().filter((x) => x.json.params.name === 'read_range').length, 1, 'the call went to Spredin once, after the Allow');
+  await finish(assert, c, [fake]);
+});
+
+test('a pairing still unanswered after the wait says so with the same code, and the next call waits again', async () => {
+  const fake = await startFakeSpredin({ pairDelayMs: 2_000 });
+  const c = startConnector({ ports: fake.range, env: { SPREDIN_CONNECTOR_PAIR_WAIT_MS: '200', SPREDIN_CONNECTOR_PAIR_ANSWER_WAIT_MS: '400' } });
+  await c.initialize();
+  const first = await c.call('get_selection');
+  const code = formatCode(fake.state.codes[0]);
+  assert.match(textOf(first), new RegExp(`show the user this code: ${code}`));
+  const still = await c.call('get_selection');
+  assert.equal(still.result.isError, true);
+  assert.match(textOf(still), new RegExp(`not answered in Spredin Pro yet \\(the code is ${code}\\)`));
+  assert.doesNotMatch(textOf(still), /show the user this code/, 'not told to show a code again');
+  let done = still;
+  for (let i = 0; i < 10 && done.result.isError; i++) done = await c.call('get_selection');
+  assert.equal(done.result.isError, false, textOf(done));
+  assert.equal(fake.state.pairCount, 1, 'the same pairing throughout: one code');
+  await finish(assert, c, [fake]);
+});
+
+test('a Don\u2019t Allow while a call waits is told at once, and nothing is read', async () => {
+  const fake = await startFakeSpredin({ pair: 'decline', pairDelayMs: 1_200 });
+  const c = startConnector({ ports: fake.range, env: { SPREDIN_CONNECTOR_PAIR_WAIT_MS: '200' } });
+  await c.initialize();
+  await c.call('get_selection');
+  const t0 = Date.now();
+  const r = await c.call('get_selection');
+  assert.equal(textOf(r), MESSAGES.declined);
+  assert.ok(Date.now() - t0 < 5_000, 'the answer ended the wait');
+  assert.equal(fake.calls().length, 0, 'nothing was sent to Spredin to read');
+  await finish(assert, c, [fake]);
+});
+
+test('the live tool list carries the annotations too', async () => {
+  const fake = await startFakeSpredin();
+  const c = startConnector({ ports: fake.range });
+  seed(fake, c);
+  await c.initialize();
+  const list = (await c.request('tools/list')).result.tools;
+  assert.ok(list.some((t) => t.name === 'describe_sheet') && list.some((t) => t.name === 'connect_spredin'));
+  for (const t of list) {
+    // A tool the extension does not know (the fake's own) is passed on with none.
+    if (t.name === 'fake_only') assert.equal(t.annotations, undefined);
+    else assert.deepEqual(t.annotations, TOOL_ANNOTATIONS[t.name], t.name);
+  }
+  assert.ok(list.some((t) => t.name === 'fake_only'));
   await finish(assert, c, [fake]);
 });
 
@@ -241,7 +307,7 @@ test('connect_spredin that is declined, or still waiting, keeps the old pairing 
   fake.state.pairDelayMs = 1_000;
   const pending = await c.call('connect_spredin');
   assert.equal(pending.result.isError, true);
-  assert.match(textOf(pending), new RegExp(`Show the user this code: ${formatCode(fake.state.codes.at(-1))}\\.`));
+  assert.match(textOf(pending), new RegExp(`show the user this code: ${formatCode(fake.state.codes.at(-1))},`));
   assert.ok(fileBytes(c).equals(before), 'not replaced while Spredin is asking');
   await until(() => !fileBytes(c).equals(before), 5_000, 'the new pairing to replace the old');
   await finish(assert, c, [fake]);
@@ -375,7 +441,7 @@ test('a decline that comes after the call stopped waiting is told to the next ca
   const c = startConnector({ ports: fake.range, env: { SPREDIN_CONNECTOR_PAIR_WAIT_MS: '200' } });
   await c.initialize();
   const r1 = await c.call('get_selection');
-  assert.match(textOf(r1), /Show the user this code/);
+  assert.match(textOf(r1), /show the user this code/);
   await sleep(900);
   const r2 = await c.call('get_selection');
   assert.equal(textOf(r2), MESSAGES.declined);

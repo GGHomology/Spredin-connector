@@ -68,6 +68,11 @@ Request:
   the chat; Spredin's sheet shows the code it received ("K7Q-M2X") and asks the
   person to allow only if Claude shows the same. A request without a valid
   code is `400`.
+- The extension's tool call that starts a pairing comes back with the code
+  after 1.5 s, since the person must see it before they can compare. The
+  call Claude makes after showing it waits for this request's answer (up to
+  its 190 s), sending MCP progress notices every 15 s, and goes on when the
+  person allows.
 
 Answers:
 
