@@ -105,25 +105,33 @@ const EXTENSION_TOOL_NAMES = EXTENSION_TOOLS.map((t) => t.name);
 const READS = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 const CHANGES = { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false };
 export const TOOL_ANNOTATIONS = {
-  describe_sheet: READS,
-  read_range: READS,
-  aggregate: READS,
-  find: READS,
-  get_selection: READS,
-  python_help: READS,
-  list_workbooks: READS,
+  describe_sheet: { title: 'Describe a sheet', ...READS },
+  read_range: { title: 'Read cells', ...READS },
+  aggregate: { title: 'Total a table', ...READS },
+  find: { title: 'Find cells', ...READS },
+  get_selection: { title: 'Get the selection', ...READS },
+  python_help: { title: 'Python reference', ...READS },
+  list_workbooks: { title: 'List open workbooks', ...READS },
   // Chooses which open workbook later calls use; changes no workbook.
-  use_workbook: { ...READS, idempotentHint: true },
-  write_cells: CHANGES,
-  memory: CHANGES,
-  slides: CHANGES,
+  use_workbook: { title: 'Choose a workbook', ...READS, idempotentHint: true },
+  write_cells: { title: 'Write cells', ...CHANGES },
+  memory: { title: 'Workbook notes', ...CHANGES },
+  slides: { title: 'Slide decks', ...CHANGES },
   // A script may reach beyond the workbook, which Spredin asks about.
-  run_python: { ...CHANGES, openWorldHint: true },
-  connect_spredin: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  run_python: { title: 'Run Python', ...CHANGES, openWorldHint: true },
+  connect_spredin: { title: 'Connect to Spredin Pro', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
 };
+/**
+ * A tool as the client is given it: with our annotations when it carries
+ * none, and a display title (MCP's `title`, beside the annotations' one) when
+ * it has none of its own.
+ */
 export function annotated(tool) {
   const a = TOOL_ANNOTATIONS[tool?.name];
-  return a && !isObj(tool.annotations) ? { ...tool, annotations: { ...a } } : tool;
+  if (!a) return tool;
+  const out = isObj(tool.annotations) ? { ...tool } : { ...tool, annotations: { ...a } };
+  if (typeof out.title !== 'string' || !out.title) out.title = a.title;
+  return out;
 }
 
 // --- What Claude is told ------------------------------------------------------
@@ -140,11 +148,20 @@ export const INSTRUCTIONS =
   'then call the tool again: it waits for their answer. If a tool says Spredin Pro is not open or does not accept the ' +
   'connection, tell the user and wait for them. Call connect_spredin only when the user asks to connect or reconnect.';
 
+/**
+ * How the user updates this program. The same server runs in the Claude
+ * Desktop extension (the .mcpb) and in the Spredin Pro plugin, whose
+ * .mcp.json sets SPREDIN_CONNECTOR_HOST=plugin; only the advice differs.
+ */
+export const UPDATE_ADVICE = {
+  extension: 'update the Spredin Pro extension in Claude Desktop → Settings → Extensions',
+  plugin: 'update the Spredin Pro plugin (in Claude Code, /plugin; in the Claude app, Customize → Plugins)',
+};
+
 export const MESSAGES = {
   unreachable:
     'Spredin Pro is not open, or its connection for AI apps is off. Ask the user to open Spredin Pro and turn on Settings → Connect AI Apps.',
-  incompatible:
-    'This version of Spredin Pro needs a newer version of the Spredin Pro extension. Ask the user to update the extension in Claude Desktop → Settings → Extensions.',
+  incompatible: `This version of Spredin Pro needs a newer version of the Spredin Pro connector. Ask the user to ${UPDATE_ADVICE.extension}.`,
   refused:
     'Spredin Pro does not accept this connection: the user may have disconnected Claude in Spredin Pro, or another program is answering on Spredin Pro’s port. Nothing was read or changed. If the user wants to connect again, call connect_spredin.',
   unusable:
@@ -163,8 +180,7 @@ export const MESSAGES = {
     'The user declined or did not answer this connection less than a minute ago. Do not ask again unless the user wants to connect; if they do, wait a minute, then call this tool again.',
   'no-window':
     'Spredin Pro has no workbook open, so it cannot ask the user to allow the connection. Ask the user to open a workbook in Spredin Pro, then call this tool again.',
-  'bad-request':
-    'Spredin Pro did not understand this extension’s request to connect. Ask the user to update Spredin Pro and the Spredin Pro extension.',
+  'bad-request': `Spredin Pro did not understand this connector’s request to connect. Ask the user to update Spredin Pro, and to ${UPDATE_ADVICE.extension}.`,
   connected: 'Connected to Spredin Pro. Carry on with what the user asked.',
   lost:
     'The connection to Spredin Pro was lost while it worked on this. Ask the user to check in Spredin Pro whether anything changed before trying again.',
@@ -173,6 +189,20 @@ export const MESSAGES = {
 };
 // The person turned the connector off while asked: to Claude, that is "off".
 MESSAGES.stopped = MESSAGES.unreachable;
+// Spredin Pro runs on the Mac, and this server reaches it on 127.0.0.1, so it
+// does nothing anywhere else (a Linux sandbox or virtual machine, for one).
+MESSAGES.notMac =
+  'These Spredin Pro tools work only on the Mac where Spredin Pro runs, and this session is running somewhere else, so nothing was read or changed. Tell the user: they can use these tools in Claude Code on their Mac, or in Claude Desktop with the Spredin Pro extension.';
+
+/** The messages for the program as the user installed it (`extension` or `plugin`). */
+export function messagesFor(host) {
+  if (host !== 'plugin') return MESSAGES;
+  return {
+    ...MESSAGES,
+    incompatible: `This version of Spredin Pro needs a newer version of the Spredin Pro connector. Ask the user to ${UPDATE_ADVICE.plugin}.`,
+    'bad-request': `Spredin Pro did not understand this connector’s request to connect. Ask the user to update Spredin Pro, and to ${UPDATE_ADVICE.plugin}.`,
+  };
+}
 
 export function cannotCheckMessage(why) {
   return `The extension could not check which program is answering on Spredin Pro’s port (${why}), so it did not ask it to connect and sent it nothing. Tell the user that the connection could not be checked on this Mac.`;
@@ -250,6 +280,7 @@ function positive(v) {
  */
 export function configFromEnv(env = process.env, platform = process.platform, home = os.homedir()) {
   const test = env.SPREDIN_CONNECTOR_TEST === '1';
+  if (test && env.SPREDIN_CONNECTOR_PLATFORM) platform = env.SPREDIN_CONNECTOR_PLATFORM;
   return {
     test,
     ports: test && env.SPREDIN_CONNECTOR_PORTS ? parsePorts(env.SPREDIN_CONNECTOR_PORTS) : DEFAULT_PORTS.slice(),
@@ -261,6 +292,8 @@ export function configFromEnv(env = process.env, platform = process.platform, ho
     lsof: test && env.SPREDIN_CONNECTOR_LSOF ? env.SPREDIN_CONNECTOR_LSOF : LSOF,
     checkListener: platform === 'darwin',
     platform,
+    // Only the wording of the update advice depends on it (messagesFor).
+    host: env.SPREDIN_CONNECTOR_HOST === 'plugin' ? 'plugin' : 'extension',
   };
 }
 
@@ -543,6 +576,7 @@ export class Connector {
     exit = (c) => process.exit(c),
   } = {}) {
     this.cfg = config;
+    this.messages = messagesFor(config.host);
     this.stdin = stdin;
     this.stdout = stdout;
     this.stderr = stderr;
@@ -1001,7 +1035,7 @@ export class Connector {
   pairErrorText(res) {
     if (res.kind === 'cannot-check') return cannotCheckMessage(res.why);
     return (
-      MESSAGES[res.kind] ??
+      this.messages[res.kind] ??
       `Spredin Pro could not pair (${res.detail ?? res.kind}). Ask the user to check Settings → Connect AI Apps in Spredin Pro.`
     );
   }
@@ -1033,7 +1067,7 @@ export class Connector {
   async pairingForCall(signal) {
     const p = this.loadPairing();
     if (p.state === 'ok') return p;
-    if (p.state === 'unusable') return { state: 'error', text: MESSAGES.unusable };
+    if (p.state === 'unusable') return { state: 'error', text: this.messages.unusable };
     if (this.unreported) {
       const { result, at } = this.unreported;
       this.unreported = null;
@@ -1046,7 +1080,7 @@ export class Connector {
   async connect(signal) {
     this.unreported = null;
     const r = await this.pairAndWait(signal, true);
-    if (r.state === 'ok') return toolText(MESSAGES.connected);
+    if (r.state === 'ok') return toolText(this.messages.connected);
     return toolError(r.text);
   }
 
@@ -1076,6 +1110,7 @@ export class Connector {
    * then instead (a call still reaches Spredin, which says to open a workbook).
    */
   async fetchLiveTools(cursor) {
+    if (this.cfg.platform !== 'darwin') return null; // no Spredin to ask: the packaged list
     const pairing = this.loadPairing();
     if (pairing.state !== 'ok') return null;
     const v = await this.ensureVerified(pairing);
@@ -1138,6 +1173,9 @@ export class Connector {
     const args = params.arguments === undefined ? {} : params.arguments;
     if (!isObj(args)) return { error: { code: -32602, message: 'Invalid params: arguments must be an object' } };
 
+    // Not on a Mac: Spredin cannot be here, so look for nothing and say why.
+    if (this.cfg.platform !== 'darwin') return { result: toolError(this.messages.notMac) };
+
     const token = params._meta?.progressToken;
     const stopProgress = typeof token === 'string' || typeof token === 'number' ? this.startProgress(token) : () => {};
     try {
@@ -1164,7 +1202,7 @@ export class Connector {
       const pairing = await this.pairingForCall(signal);
       if (pairing.state !== 'ok') return { result: toolError(pairing.text) };
       const v = await this.ensureVerified(pairing);
-      if (!v.ok) return { result: toolError(MESSAGES[v.reason]) };
+      if (!v.ok) return { result: toolError(this.messages[v.reason]) };
 
       const rpcId = ++this.seq;
       const onCancel = () => this.cancelAtSpredin(v.port, pairing, rpcId);
@@ -1186,23 +1224,23 @@ export class Connector {
           reprobed = true;
           continue;
         }
-        if (isRefused(e)) return { result: toolError(MESSAGES.unreachable) };
+        if (isRefused(e)) return { result: toolError(this.messages.unreachable) };
         this.log(`tools/call ${name}: ${e.code || 'error'}`);
-        return { result: toolError(e.code === 'ETIMEDOUT_LOCAL' ? MESSAGES.slow : MESSAGES.lost) };
+        return { result: toolError(e.code === 'ETIMEDOUT_LOCAL' ? this.messages.slow : this.messages.lost) };
       } finally {
         signal.removeEventListener('abort', onCancel);
       }
-      if (r.kind === 'too-large') return { result: toolError(MESSAGES.tooLarge) };
+      if (r.kind === 'too-large') return { result: toolError(this.messages.tooLarge) };
       if (r.kind === 'refused' || r.kind === 'unsigned') {
         if (r.kind === 'unsigned') this.markImpostor(v.port);
         this.verified = null;
-        return { result: toolError(MESSAGES.refused) };
+        return { result: toolError(this.messages.refused) };
       }
       const reply = r.kind === 'ok' && isObj(r.json) ? r.json : null;
       if (!reply) {
         return {
           result: toolError(
-            `Spredin Pro gave an answer this extension does not understand (HTTP ${r.status}). Ask the user to update Spredin Pro and the Spredin Pro extension.`,
+            `Spredin Pro gave an answer this connector does not understand (HTTP ${r.status}). Ask the user to update Spredin Pro, and to ${UPDATE_ADVICE[this.cfg.host] ?? UPDATE_ADVICE.extension}.`,
           ),
         };
       }

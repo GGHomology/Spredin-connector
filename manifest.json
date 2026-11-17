@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "spredin-connector",
   "display_name": "Spredin Pro",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Lets Claude read the workbooks open in Spredin Pro on this computer and change them. Changes ask you in Spredin Pro first, unless you turned on applying them without asking.",
   "long_description": "Spredin Pro is a spreadsheet app for the Mac. This extension connects Claude Desktop to it, on this computer only.\n\nOnce you allow Claude in Spredin Pro, it can read every open workbook without asking: cells and tables, sheet layouts, your selection. It can also write cells, run Python on a workbook, and edit its slides and notes. Each change shows a card in Spredin Pro for you to allow first, unless you turned on Apply assistant changes without asking; a script that reaches beyond the workbook still asks unless you also allowed that, and a change to the notes always asks. Each change is one undo step.\n\nTo use it, turn on Settings → Connect AI Apps in Spredin Pro. The first time Claude asks, Spredin Pro shows an Allow sheet with a code; allow only if Claude shows the same code. The extension talks only to Spredin Pro on this computer, and signs every request so that no other program can pose as Spredin Pro.",
   "author": {

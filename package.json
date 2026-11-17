@@ -1,6 +1,6 @@
 {
   "name": "spredin-connector",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Claude Desktop extension that lets Claude work in Spredin Pro on the same computer, with the user's approval for every change.",
   "private": true,
   "type": "module",

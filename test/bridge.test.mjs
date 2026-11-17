@@ -8,7 +8,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { startFakeSpredin, startImpostor, closeAllFakes, portRange, randomBase, FAKE_TOOLS, keyOf, reqMac } from './support/fakeSpredin.mjs';
 import { startConnector, finish, killAll, sleep, textOf, writePairing, fakeLsof, REPO } from './support/harness.mjs';
-import { MESSAGES, formatCode, annotated, TOOL_ANNOTATIONS, MAX_REQUEST_BODY } from '../server/connector.js';
+import { MESSAGES, messagesFor, formatCode, annotated, TOOL_ANNOTATIONS, MAX_REQUEST_BODY } from '../server/connector.js';
 
 afterEach(async () => {
   await killAll();
@@ -77,7 +77,7 @@ test('the first call pairs with a fresh code, keeps the token in a 0600 file, an
   // POST /pair: the app's claim, who is asking, and a valid fresh code.
   const pair = fake.state.requests.find((q) => q.url === '/pair');
   assert.deepEqual(pair.json.client, { name: 'Claude', version: '0.14.2' });
-  assert.deepEqual(pair.json.connector, { name: 'spredin-connector', version: '0.1.0' });
+  assert.deepEqual(pair.json.connector, { name: 'spredin-connector', version: JSON.parse(fs.readFileSync(path.join(REPO, 'manifest.json'), 'utf8')).version });
   assert.match(pair.json.code, /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/);
 
   // The pairing file: whole, this user's only.
@@ -530,6 +530,39 @@ test('a Spredin with a newer connector protocol says to update the extension', a
   await c.initialize();
   assert.equal(textOf(await c.call('get_selection')), MESSAGES.incompatible);
   assert.equal(fake.state.pairCount, 0);
+  await finish(assert, c, [fake]);
+});
+
+test('run as the plugin (SPREDIN_CONNECTOR_HOST=plugin), the update advice names the plugin, not Claude Desktop', async () => {
+  const fake = await startFakeSpredin({ connector: 2 });
+  const c = startConnector({ ports: fake.range, env: { SPREDIN_CONNECTOR_HOST: 'plugin' } });
+  await c.initialize();
+  const text = textOf(await c.call('get_selection'));
+  assert.equal(text, messagesFor('plugin').incompatible);
+  assert.match(text, /Spredin Pro plugin/);
+  assert.doesNotMatch(text, /Claude Desktop/);
+  await finish(assert, c, [fake]);
+});
+
+test('on a computer that is not a Mac, a call says so and looks for no Spredin', async () => {
+  const fake = await startFakeSpredin();
+  const c = startConnector({ ports: fake.range, env: { SPREDIN_CONNECTOR_PLATFORM: 'linux' } });
+  seed(fake, c);
+  await c.initialize();
+  const r = await c.call('read_range', { range: 'Sales!A1:B2' });
+  assert.equal(r.result.isError, true);
+  assert.equal(textOf(r), MESSAGES.notMac);
+  const conn = await c.call('connect_spredin');
+  assert.equal(textOf(conn), MESSAGES.notMac, 'connect_spredin too');
+  assert.deepEqual(c.net().filter((x) => x.connect), [], 'nothing was sent anywhere');
+  assert.equal(fake.calls().length, 0);
+  assert.equal(fake.state.pairCount, 0);
+  // The packaged tools are still listed, so Claude can say why they do not
+  // work here, and listing them asks no Spredin either.
+  const list = await c.request('tools/list');
+  assert.deepEqual(list.result.tools, PACKAGED);
+  assert.deepEqual(c.net().filter((x) => x.connect), [], 'nothing was sent anywhere');
+  assert.equal(fake.calls().length, 0);
   await finish(assert, c, [fake]);
 });
 

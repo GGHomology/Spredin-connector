@@ -22,6 +22,7 @@ import {
   LSOF,
   CODE_ALPHABET,
   MESSAGES,
+  messagesFor,
   INSTRUCTIONS,
   TOOL_ANNOTATIONS,
   annotated,
@@ -264,4 +265,53 @@ test('tool annotations: reads say they only read, changes that they change, a sc
   const a = annotated({ name: 'read_range' });
   a.annotations.readOnlyHint = false;
   assert.equal(TOOL_ANNOTATIONS.read_range.readOnlyHint, true);
+});
+
+test('every tool has a title, in its annotations and as its display title', () => {
+  const packaged = JSON.parse(fs.readFileSync(path.join(REPO, 'server', 'tools.json'), 'utf8')).tools;
+  const titles = new Set();
+  for (const [name, a] of Object.entries(TOOL_ANNOTATIONS)) {
+    assert.equal(typeof a.title, 'string', name);
+    assert.ok(a.title.length >= 3 && a.title.length <= 40, `${name}: ${a.title}`);
+    assert.match(a.title, /^[A-Z]/, `${name} starts with a capital`);
+    assert.ok(!titles.has(a.title), `${name}: titles differ`);
+    titles.add(a.title);
+  }
+  for (const t of packaged) {
+    const out = annotated(t);
+    assert.equal(out.annotations.title, TOOL_ANNOTATIONS[t.name].title, t.name);
+    assert.equal(out.title, TOOL_ANNOTATIONS[t.name].title, t.name);
+  }
+  // A tool that carries its own annotations keeps them, and still gets a display title.
+  const own = annotated({ name: 'read_range', annotations: { readOnlyHint: true } });
+  assert.deepEqual(own.annotations, { readOnlyHint: true });
+  assert.equal(own.title, 'Read cells');
+  // A tool's own title wins.
+  assert.equal(annotated({ name: 'read_range', title: 'Read' }).title, 'Read');
+  assert.equal(annotated({ name: 'new_tool' }).title, undefined);
+});
+
+test('the host: plugin only when SPREDIN_CONNECTOR_HOST is exactly "plugin"; the platform hook only in test mode', () => {
+  assert.equal(configFromEnv({}, 'darwin', '/Users/ann').host, 'extension');
+  assert.equal(configFromEnv({ SPREDIN_CONNECTOR_HOST: 'plugin' }, 'darwin', '/Users/ann').host, 'plugin');
+  for (const v of ['', 'Plugin', 'plugin ', 'extension', 'x']) {
+    assert.equal(configFromEnv({ SPREDIN_CONNECTOR_HOST: v }, 'darwin', '/Users/ann').host, 'extension', JSON.stringify(v));
+  }
+  assert.equal(configFromEnv({ SPREDIN_CONNECTOR_PLATFORM: 'linux' }, 'darwin', '/Users/ann').platform, 'darwin');
+  const t = configFromEnv({ SPREDIN_CONNECTOR_PLATFORM: 'linux', SPREDIN_CONNECTOR_TEST: '1' }, 'darwin', '/Users/ann');
+  assert.equal(t.platform, 'linux');
+  assert.equal(t.checkListener, false);
+  // Only the update advice differs between the two.
+  const ext = messagesFor('extension');
+  const plug = messagesFor('plugin');
+  assert.equal(ext, MESSAGES);
+  for (const k of Object.keys(MESSAGES)) {
+    if (k === 'incompatible' || k === 'bad-request') {
+      assert.match(ext[k], /Claude Desktop → Settings → Extensions/, k);
+      assert.match(plug[k], /Spredin Pro plugin/, k);
+      assert.doesNotMatch(plug[k], /Claude Desktop/, k);
+    } else assert.equal(plug[k], ext[k], k);
+  }
+  assert.match(MESSAGES.notMac, /only on the Mac/);
+  assert.match(MESSAGES.notMac, /nothing was read or changed/);
 });
