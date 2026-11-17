@@ -148,6 +148,11 @@ The contract with Spredin Pro is [PROTOCOL.md](PROTOCOL.md). Spredin's side is
 The server answers both kinds of MCP client. Older clients use `initialize`.
 Clients of the 2026-07-28 revision send their version with each request.
 
+The same server is the Spredin Pro plugin's (GGHomology/Spredin-plugin, which
+copies `server/` and `package.json` from a commit here). The plugin's
+`.mcp.json` sets `SPREDIN_CONNECTOR_HOST=plugin`, which changes only how the
+server tells the user to update it; it is not a test hook.
+
 ### After each Spredin Pro release
 
 Regenerate the tool list. Run this from the Spredin Pro checkout, which needs
@@ -186,6 +191,7 @@ These variables exist for the tests. The extension ignores them unless
 | `SPREDIN_CONNECTOR_PAIR_ANSWER_WAIT_MS` | How long a call made after the code was given waits for the person's answer (190 s). |
 | `SPREDIN_CONNECTOR_PROGRESS_MS` | How often progress is reported (15 s). |
 | `SPREDIN_CONNECTOR_LSOF` | A program to run in place of `/usr/sbin/lsof`. |
+| `SPREDIN_CONNECTOR_PLATFORM` | The system to act as if on, e.g. `linux` (off a Mac, every call says the tools work only on the Mac). |
 
 ### Release
 

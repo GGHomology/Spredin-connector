@@ -1,7 +1,7 @@
 {
   "name": "spredin-connector",
   "version": "0.1.1",
-  "description": "Claude Desktop extension that lets Claude work in Spredin Pro on the same computer, with the user's approval for every change.",
+  "description": "The bridge between Claude and Spredin Pro on the same Mac: the server of the Claude Desktop extension and of the Spredin Pro plugin.",
   "private": true,
   "type": "module",
   "license": "MIT",
