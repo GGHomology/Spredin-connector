@@ -22,6 +22,11 @@ You need Spredin Pro 1.0.4 or later, and Claude Desktop.
 
 There is nothing to set up in Claude Desktop.
 
+**Using Claude Code?** Install the Spredin Pro plugin instead. It carries this
+same server and the Spredin Pro skill:
+`/plugin install spredin-pro --marketplace GGHomology/Spredin-plugin`
+(<https://github.com/GGHomology/Spredin-plugin>).
+
 ## First use
 
 1. In Spredin Pro, choose **Settings → Connect AI Apps** and turn on
