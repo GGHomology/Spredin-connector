@@ -34,11 +34,11 @@ export function sleep(ms) {
  * never touched). HOME points into a temp folder too. `test: false` leaves
  * the test flag out (the hooks must then be ignored).
  */
-export function startConnector({ ports, env = {}, pairingFile, node = process.execPath, test = true } = {}) {
+export function startConnector({ ports, env = {}, pairingFile, node = process.execPath, test = true, flag = test } = {}) {
   const dir = tempDir();
   const file = pairingFile ?? path.join(dir, 'Spredin Connector', 'pairing.json');
   const spyFile = path.join(dir, 'net.jsonl');
-  const child = spawn(node, ['--require', SPY, SERVER], {
+  const child = spawn(node, ['--require', SPY, SERVER, ...(flag ? ['--test-hooks'] : [])], {
     cwd: dir,
     env: {
       PATH: process.env.PATH,

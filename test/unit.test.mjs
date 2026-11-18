@@ -23,6 +23,7 @@ import {
   CODE_ALPHABET,
   MESSAGES,
   messagesFor,
+  SPREDIN_PLATFORMS,
   INSTRUCTIONS,
   TOOL_ANNOTATIONS,
   annotated,
@@ -60,6 +61,18 @@ const HOOKS = {
   SPREDIN_CONNECTOR_LSOF: '/tmp/fake-lsof',
 };
 
+test('the test hooks count only with SPREDIN_CONNECTOR_TEST=1 and the --test-hooks argument', () => {
+  const env = { ...HOOKS, SPREDIN_CONNECTOR_TEST: '1' };
+  for (const argv of [[], ['--test'], ['--test-hooks=1'], ['test-hooks'], undefined]) {
+    const c = configFromEnv(env, 'darwin', '/Users/ann', argv === undefined ? [] : argv);
+    assert.equal(c.test, false, JSON.stringify(argv));
+    assert.equal(c.lsof, '/usr/sbin/lsof', 'never another program');
+    assert.equal(c.pairingFile, '/Users/ann/Library/Application Support/Spredin Connector/pairing.json');
+  }
+  assert.equal(configFromEnv({ ...HOOKS }, 'darwin', '/Users/ann', ['--test-hooks']).test, false, 'the argument alone neither');
+  assert.equal(configFromEnv(env, 'darwin', '/Users/ann', ['--test-hooks']).test, true);
+});
+
 test('the test hooks are ignored unless SPREDIN_CONNECTOR_TEST=1', () => {
   for (const flag of [undefined, '', '0', 'true', 'yes', '1 ']) {
     const env = flag === undefined ? { ...HOOKS } : { ...HOOKS, SPREDIN_CONNECTOR_TEST: flag };
@@ -72,7 +85,7 @@ test('the test hooks are ignored unless SPREDIN_CONNECTOR_TEST=1', () => {
     assert.equal(c.lsof, '/usr/sbin/lsof');
     assert.equal(c.checkListener, true);
   }
-  const t = configFromEnv({ ...HOOKS, SPREDIN_CONNECTOR_TEST: '1' }, 'darwin', '/Users/ann');
+  const t = configFromEnv({ ...HOOKS, SPREDIN_CONNECTOR_TEST: '1' }, 'darwin', '/Users/ann', ['--test-hooks']);
   assert.equal(t.test, true);
   assert.deepEqual(t.ports, [45000, 45001]);
   assert.equal(t.pairingFile, path.resolve('/tmp/elsewhere/pairing.json'));
@@ -298,7 +311,7 @@ test('the host: plugin only when SPREDIN_CONNECTOR_HOST is exactly "plugin"; the
     assert.equal(configFromEnv({ SPREDIN_CONNECTOR_HOST: v }, 'darwin', '/Users/ann').host, 'extension', JSON.stringify(v));
   }
   assert.equal(configFromEnv({ SPREDIN_CONNECTOR_PLATFORM: 'linux' }, 'darwin', '/Users/ann').platform, 'darwin');
-  const t = configFromEnv({ SPREDIN_CONNECTOR_PLATFORM: 'linux', SPREDIN_CONNECTOR_TEST: '1' }, 'darwin', '/Users/ann');
+  const t = configFromEnv({ SPREDIN_CONNECTOR_PLATFORM: 'linux', SPREDIN_CONNECTOR_TEST: '1' }, 'darwin', '/Users/ann', ['--test-hooks']);
   assert.equal(t.platform, 'linux');
   assert.equal(t.checkListener, false);
   // Only the update advice differs between the two.
@@ -312,6 +325,8 @@ test('the host: plugin only when SPREDIN_CONNECTOR_HOST is exactly "plugin"; the
       assert.doesNotMatch(plug[k], /Claude Desktop/, k);
     } else assert.equal(plug[k], ext[k], k);
   }
-  assert.match(MESSAGES.notMac, /only on the Mac/);
-  assert.match(MESSAGES.notMac, /nothing was read or changed/);
+  assert.match(MESSAGES.elsewhere, /only on the computer where Spredin Pro runs/);
+  assert.match(MESSAGES.elsewhere, /nothing was read or changed/);
+  assert.doesNotMatch(MESSAGES.elsewhere, /\bMac\b/, 'the same words will hold once Spredin runs on Windows');
+  assert.deepEqual(SPREDIN_PLATFORMS, ['darwin']);
 });

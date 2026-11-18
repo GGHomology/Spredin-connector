@@ -181,7 +181,9 @@ and `git`. The generator check runs only when a Spredin Pro checkout is next
 to this one.
 
 These variables exist for the tests. The extension ignores them unless
-`SPREDIN_CONNECTOR_TEST=1` is also set:
+`SPREDIN_CONNECTOR_TEST=1` is also set and it was started with the
+`--test-hooks` argument (the tests' harness does both; no shipped config
+passes the argument):
 
 | Variable | Meaning |
 |---|---|
@@ -191,7 +193,7 @@ These variables exist for the tests. The extension ignores them unless
 | `SPREDIN_CONNECTOR_PAIR_ANSWER_WAIT_MS` | How long a call made after the code was given waits for the person's answer (190 s). |
 | `SPREDIN_CONNECTOR_PROGRESS_MS` | How often progress is reported (15 s). |
 | `SPREDIN_CONNECTOR_LSOF` | A program to run in place of `/usr/sbin/lsof`. |
-| `SPREDIN_CONNECTOR_PLATFORM` | The system to act as if on, e.g. `linux` (off a Mac, every call says the tools work only on the Mac). |
+| `SPREDIN_CONNECTOR_PLATFORM` | The system to act as if on, e.g. `linux` (on a system Spredin Pro does not run on, every call says so). |
 
 ### Release
 

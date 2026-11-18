@@ -76,14 +76,21 @@ to pair. It writes one file: its pairing file.
   Disconnect sticks, and an impostor cannot make it pair.
 - **Test hooks are off.** The `SPREDIN_CONNECTOR_*` settings that point it at
   other ports, another pairing file or another `lsof` work only when
-  `SPREDIN_CONNECTOR_TEST=1` is also set, which Claude Desktop does not do.
+  `SPREDIN_CONNECTOR_TEST=1` is set AND the server was started with the
+  `--test-hooks` argument. Neither Claude Desktop (`manifest.json`) nor the
+  Spredin Pro plugin (`.mcp.json`) passes it. A variable alone is not enough,
+  because an environment can be set by something you did not mean to trust
+  with this: in Claude Code, a project's settings set the session's.
+- **Only where Spredin Pro runs.** On a system Spredin Pro does not run on
+  (today, anything but macOS), the extension connects to nothing and every
+  call says so.
 
 ## What it does not protect against
 
-- **Pairing on a computer other than a Mac.** The `lsof` check is macOS only.
-  Spredin for Windows does not exist yet. When it does, Windows will need its
-  own check that the listener runs as you. Until then, a first pairing there
-  would rest on the code and on no other user's program holding the port.
+- **Windows, when Spredin for Windows ships.** The `lsof` check is macOS only,
+  and off macOS the extension does nothing today. Windows will need its own
+  check that the listener runs as you before it joins the systems the
+  connector works on (`SPREDIN_PLATFORMS`).
 - **Programs already running as you.** Software running under your own account
   can read your files, the pairing file included, can pass `lsof`'s check, and
   can control your apps. No local connection can defend against that.

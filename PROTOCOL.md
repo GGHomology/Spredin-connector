@@ -204,14 +204,15 @@ whole script or cell list it approved is kept with the step.
   exclusively, then renamed).
 - Offers its packaged copy of the tool list when Spredin cannot be reached,
   so Claude always knows the tools; a call then says how to reach Spredin.
-- **Only on a Mac.** On any other system (a Linux sandbox or virtual machine,
-  for one) it looks for no Spredin at all: it lists its packaged tools and
-  every call says these tools work only on the Mac where Spredin Pro runs.
+- **Only where Spredin Pro runs** (macOS today). On any other system (a Linux
+  sandbox or virtual machine: a Cowork task, for one) it looks for no Spredin
+  at all: it lists its packaged tools and every call says these tools work only
+  on the computer where Spredin Pro runs.
 - **The same program in two packages.** The Claude Desktop extension (the
   `.mcpb`) and the Spredin Pro plugin run this server unchanged; the plugin's
   `.mcp.json` sets `SPREDIN_CONNECTOR_HOST=plugin`, which changes only how it
-  tells the user to update it. Both use the one pairing file above, so a Mac
-  with both pairs once.
+  tells the user to update it. Both use the one pairing file above, so a
+  computer with both pairs once.
 - Each tool it lists carries MCP annotations, a title among them.
 - Writes nothing but its pairing file; logs only to stderr, never the token,
   a MAC, tool arguments or results.

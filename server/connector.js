@@ -31,6 +31,12 @@ import { fileURLToPath } from 'node:url';
 export const HOST = '127.0.0.1';
 export const DEFAULT_PORTS = [41870, 41871, 41872, 41873, 41874, 41875, 41876, 41877];
 export const CONNECTOR_PROTOCOL = 1;
+/**
+ * The systems Spredin Pro runs on (process.platform). Off them the connector
+ * looks for no Spredin. Windows joins when Spredin for Windows ships, with its
+ * own check of who is listening (the lsof check is macOS only).
+ */
+export const SPREDIN_PLATFORMS = ['darwin'];
 
 /** Handshake-based MCP revisions, newest first. */
 export const LEGACY_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
@@ -189,10 +195,11 @@ export const MESSAGES = {
 };
 // The person turned the connector off while asked: to Claude, that is "off".
 MESSAGES.stopped = MESSAGES.unreachable;
-// Spredin Pro runs on the Mac, and this server reaches it on 127.0.0.1, so it
-// does nothing anywhere else (a Linux sandbox or virtual machine, for one).
-MESSAGES.notMac =
-  'These Spredin Pro tools work only on the Mac where Spredin Pro runs, and this session is running somewhere else, so nothing was read or changed. Tell the user: they can use these tools in Claude Code on their Mac, or in Claude Desktop with the Spredin Pro extension.';
+// This server reaches Spredin Pro on 127.0.0.1, so on a system Spredin Pro
+// does not run on (a Linux sandbox or virtual machine: a Cowork task, for
+// one) it does nothing, and says so.
+MESSAGES.elsewhere =
+  'These Spredin Pro tools work only on the computer where Spredin Pro runs, and this session is running somewhere else (a virtual machine, a sandbox or another computer), so nothing was read or changed. Tell the user: they can use these tools in Claude Code on the computer where Spredin Pro runs, or in Claude Desktop with the Spredin Pro extension.';
 
 /** The messages for the program as the user installed it (`extension` or `plugin`). */
 export function messagesFor(host) {
@@ -272,14 +279,23 @@ function positive(v) {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+/** The argument the tests start the server with; no shipped config passes it. */
+export const TEST_FLAG = '--test-hooks';
+
 /**
  * The connector's settings. The SPREDIN_CONNECTOR_* hooks are for the tests
- * and count only when SPREDIN_CONNECTOR_TEST=1; otherwise the connector looks
- * on Spredin's ports, keeps its pairing where PROTOCOL.md says and checks
- * the listener with /usr/sbin/lsof.
+ * and count only when SPREDIN_CONNECTOR_TEST=1 AND the server was started
+ * with --test-hooks; otherwise the connector looks on Spredin's ports, keeps
+ * its pairing where PROTOCOL.md says and checks the listener with
+ * /usr/sbin/lsof. A variable alone is not enough because the environment can
+ * be set by something the user did not mean to trust with this (in Claude
+ * Code, a project's settings set the environment of a session), and the hooks
+ * name the program run in place of lsof and where the token is written. The
+ * arguments come only from manifest.json or the plugin's .mcp.json, which
+ * never pass it.
  */
-export function configFromEnv(env = process.env, platform = process.platform, home = os.homedir()) {
-  const test = env.SPREDIN_CONNECTOR_TEST === '1';
+export function configFromEnv(env = process.env, platform = process.platform, home = os.homedir(), argv = process.argv.slice(2)) {
+  const test = env.SPREDIN_CONNECTOR_TEST === '1' && Array.isArray(argv) && argv.includes(TEST_FLAG);
   if (test && env.SPREDIN_CONNECTOR_PLATFORM) platform = env.SPREDIN_CONNECTOR_PLATFORM;
   return {
     test,
@@ -1110,7 +1126,7 @@ export class Connector {
    * then instead (a call still reaches Spredin, which says to open a workbook).
    */
   async fetchLiveTools(cursor) {
-    if (this.cfg.platform !== 'darwin') return null; // no Spredin to ask: the packaged list
+    if (!SPREDIN_PLATFORMS.includes(this.cfg.platform)) return null; // no Spredin to ask: the packaged list
     const pairing = this.loadPairing();
     if (pairing.state !== 'ok') return null;
     const v = await this.ensureVerified(pairing);
@@ -1173,8 +1189,8 @@ export class Connector {
     const args = params.arguments === undefined ? {} : params.arguments;
     if (!isObj(args)) return { error: { code: -32602, message: 'Invalid params: arguments must be an object' } };
 
-    // Not on a Mac: Spredin cannot be here, so look for nothing and say why.
-    if (this.cfg.platform !== 'darwin') return { result: toolError(this.messages.notMac) };
+    // Not a system Spredin runs on: it cannot be here, so look for nothing and say why.
+    if (!SPREDIN_PLATFORMS.includes(this.cfg.platform)) return { result: toolError(this.messages.elsewhere) };
 
     const token = params._meta?.progressToken;
     const stopProgress = typeof token === 'string' || typeof token === 'number' ? this.startProgress(token) : () => {};

@@ -544,16 +544,16 @@ test('run as the plugin (SPREDIN_CONNECTOR_HOST=plugin), the update advice names
   await finish(assert, c, [fake]);
 });
 
-test('on a computer that is not a Mac, a call says so and looks for no Spredin', async () => {
+test('on a system Spredin Pro does not run on, a call says so and looks for no Spredin', async () => {
   const fake = await startFakeSpredin();
   const c = startConnector({ ports: fake.range, env: { SPREDIN_CONNECTOR_PLATFORM: 'linux' } });
   seed(fake, c);
   await c.initialize();
   const r = await c.call('read_range', { range: 'Sales!A1:B2' });
   assert.equal(r.result.isError, true);
-  assert.equal(textOf(r), MESSAGES.notMac);
+  assert.equal(textOf(r), MESSAGES.elsewhere);
   const conn = await c.call('connect_spredin');
-  assert.equal(textOf(conn), MESSAGES.notMac, 'connect_spredin too');
+  assert.equal(textOf(conn), MESSAGES.elsewhere, 'connect_spredin too');
   assert.deepEqual(c.net().filter((x) => x.connect), [], 'nothing was sent anywhere');
   assert.equal(fake.calls().length, 0);
   assert.equal(fake.state.pairCount, 0);
@@ -618,6 +618,19 @@ test('progress notifications while Spredin works, only when the client asked for
   await c.call('write_cells', { start: 'A1', values: [['2']] });
   await sleep(150);
   assert.equal(c.notifications('notifications/progress').length, n, 'no token, no progress');
+  await finish(assert, c, [fake]);
+});
+
+test('SPREDIN_CONNECTOR_TEST=1 without the --test-hooks argument is ignored too: an environment alone cannot turn the hooks on', async () => {
+  const fake = await startFakeSpredin();
+  const c = startConnector({ ports: fake.range, test: true, flag: false });
+  seed(fake, c);
+  await c.initialize();
+  const r = await c.request('tools/list');
+  assert.deepEqual(r.result.tools, PACKAGED);
+  assert.deepEqual(c.net().filter((x) => x.connect), [], 'no pairing found at the real path: no connection at all');
+  assert.equal(fake.state.requests.length, 0);
+  assert.doesNotMatch(c.stderr, /test mode/);
   await finish(assert, c, [fake]);
 });
 
