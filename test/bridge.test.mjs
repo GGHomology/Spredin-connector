@@ -539,7 +539,7 @@ test('run as the plugin (SPREDIN_CONNECTOR_HOST=plugin), the update advice names
   await c.initialize();
   const text = textOf(await c.call('get_selection'));
   assert.equal(text, messagesFor('plugin').incompatible);
-  assert.match(text, /Spredin Pro plugin/);
+  assert.match(text, /Spredin Pro Tools plugin/);
   assert.doesNotMatch(text, /Claude Desktop/);
   await finish(assert, c, [fake]);
 });

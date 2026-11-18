@@ -78,7 +78,7 @@ to pair. It writes one file: its pairing file.
   other ports, another pairing file or another `lsof` work only when
   `SPREDIN_CONNECTOR_TEST=1` is set AND the server was started with the
   `--test-hooks` argument. Neither Claude Desktop (`manifest.json`) nor the
-  Spredin Pro plugin (`.mcp.json`) passes it. A variable alone is not enough,
+  Spredin Pro Tools plugin (`.mcp.json`) passes it. A variable alone is not enough,
   because an environment can be set by something you did not mean to trust
   with this: in Claude Code, a project's settings set the session's.
 - **Only where Spredin Pro runs.** On a system Spredin Pro does not run on

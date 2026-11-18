@@ -321,7 +321,7 @@ test('the host: plugin only when SPREDIN_CONNECTOR_HOST is exactly "plugin"; the
   for (const k of Object.keys(MESSAGES)) {
     if (k === 'incompatible' || k === 'bad-request') {
       assert.match(ext[k], /Claude Desktop → Settings → Extensions/, k);
-      assert.match(plug[k], /Spredin Pro plugin/, k);
+      assert.match(plug[k], /Spredin Pro Tools plugin/, k);
       assert.doesNotMatch(plug[k], /Claude Desktop/, k);
     } else assert.equal(plug[k], ext[k], k);
   }

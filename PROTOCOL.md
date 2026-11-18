@@ -209,7 +209,7 @@ whole script or cell list it approved is kept with the step.
   at all: it lists its packaged tools and every call says these tools work only
   on the computer where Spredin Pro runs.
 - **The same program in two packages.** The Claude Desktop extension (the
-  `.mcpb`) and the Spredin Pro plugin run this server unchanged; the plugin's
+  `.mcpb`) and the Spredin Pro Tools plugin run this server unchanged; the plugin's
   `.mcp.json` sets `SPREDIN_CONNECTOR_HOST=plugin`, which changes only how it
   tells the user to update it. Both use the one pairing file above, so a
   computer with both pairs once.

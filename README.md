@@ -22,10 +22,11 @@ You need Spredin Pro 1.0.4 or later, and Claude Desktop.
 
 There is nothing to set up in Claude Desktop.
 
-**Using Claude Code?** Install the Spredin Pro plugin instead. It carries this
-same server and the Spredin Pro skill:
-`/plugin install spredin-pro --marketplace GGHomology/Spredin-plugin`
-(<https://github.com/GGHomology/Spredin-plugin>).
+**Using Claude Code?** Install the Spredin Pro Tools plugin instead. It
+carries this same server:
+`/plugin install spredin-pro-tools --marketplace GGHomology/Spredin-plugin`
+(<https://github.com/GGHomology/Spredin-plugin>). The Spredin Pro skill is a
+plugin of its own there, and in Anthropic's plugin directory.
 
 ## First use
 
@@ -153,7 +154,7 @@ The contract with Spredin Pro is [PROTOCOL.md](PROTOCOL.md). Spredin's side is
 The server answers both kinds of MCP client. Older clients use `initialize`.
 Clients of the 2026-07-28 revision send their version with each request.
 
-The same server is the Spredin Pro plugin's (GGHomology/Spredin-plugin, which
+The same server is the Spredin Pro Tools plugin's (GGHomology/Spredin-plugin, which
 copies `server/` and `package.json` from a commit here). The plugin's
 `.mcp.json` sets `SPREDIN_CONNECTOR_HOST=plugin`, which changes only how the
 server tells the user to update it; it is not a test hook.
